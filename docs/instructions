@@ -1,0 +1,237 @@
+Wrote 232 lines to /home/hele/Documents/Claude/5g lab/lab/docs/testing-and-tracing.md
+# Testing the message flow and taking a trace
+
+A step-by-step runbook for triggering a full UE registration + PDU session
+in the lab and capturing/reading the packet trace for it. For static
+reference (IPs, ports, node list) see `docs/5g-lab-reference.html`; this
+document is about *doing* a test run, not looking things up.
+
+All commands assume you're in `lab/` and your shell has working `docker`
+access (`docker ps` succeeds without error — see README.md if not).
+
+---
+
+## 1. What you're actually testing
+
+A single UE "attach" exercises almost every interface in the core, in this
+order:
+
+| # | Step | Interfaces involved |
+|---|------|----------------------|
+| 1 | gNB boots, sets up its NGAP/SCTP association to AMF | N2 |
+| 2 | UE sends Initial Registration (SUCI) | N1 (inside N2) |
+| 3 | AMF asks AUSF to authenticate the UE, AUSF asks UDM for vectors | SBI (Nausf, Nudm) |
+| 4 | 5G-AKA challenge/response, Security Mode Command/Complete | N1/N2 |
+| 5 | AMF checks subscription data (NSSAI, access/mobility data) with UDM | SBI (Nudm) |
+| 6 | Registration Accept / Complete | N1/N2 |
+| 7 | UE requests a PDU session; AMF forwards to SMF | SBI (Namf, Nsmf) |
+| 8 | SMF fetches session-management subscription data from UDM, policy from PCF | SBI (Nudm, Npcf) |
+| 9 | SMF sets up the session on the UPF | N4 (PFCP) |
+| 10 | PDU Session Establishment Accept reaches the UE; `uesimtun0` comes up | N1/N2 |
+| 11 | Actual user traffic (e.g. a ping) flows UE→gNB→UPF→internet | N3 (GTP-U) + N6 |
+
+Everything before step 7 is **signaling only** (no user IP traffic).
+Step 11 is the only step that produces GTP-U payload packets.
+
+---
+
+## 2. Start the trace *before* you trigger anything
+
+Traces are much easier to read if they start from an empty NGAP/NAS state.
+Pick one:
+
+### Option A — live view in Wireshark (recommended for a first look)
+```bash
+./scripts/06-wireshark-live.sh --all-kind
+```
+This opens Wireshark immediately, streaming from every kind node. Leave it
+running, then go to §3 to trigger the test. Stop it by closing the Wireshark
+window.
+
+### Option B — capture to a file (better if you want to replay/share it)
+```bash
+./scripts/07-capture-to-file.sh --all-kind
+```
+This blocks and captures until you press `Ctrl-C`. Do that *after*
+finishing §3. It prints the saved path, e.g. `cluster/capture-20260916-...pcap`.
+
+### Narrowing the capture (optional)
+Both scripts accept a `FILTER` env var (a tcpdump capture filter) if you
+only care about one thing, e.g.:
+```bash
+FILTER='sctp or port 8805 or port 2152' ./scripts/06-wireshark-live.sh --all-kind
+```
+- `sctp` → N2 (NGAP, carries N1/NAS too)
+- `port 8805` → N4 (PFCP)
+- `port 2152` → N3/N9 (GTP-U)
+- add `or tcp port 80` to also catch SBI (HTTP/2) traffic between NFs
+
+---
+
+## 3. Trigger a clean attach
+
+The cleanest, most reproducible way to generate a full attach is to restart
+the simulated UE and gNB together. This forces a brand-new NGAP association
+and a full Initial Registration (not a GUTI-based re-registration, which
+skips some of the steps in the table above).
+
+```bash
+kubectl -n core delete pod -l 'component in (ue,gnb)'
+```
+
+Kubernetes recreates both pods immediately; the new UE starts attaching
+within a few seconds on its own (no further action needed — UERANSIM
+auto-registers and auto-requests a PDU session on startup).
+
+**If you see NAS/NGAP errors that don't match anything in §5** (e.g. `AMF
+can not select an AUSF by NRF`, `UDM discovery failed`, or repeated
+`CONGESTION`/`ILLEGAL_UE` rejects): this is almost always NRF's in-memory
+registration table being out of sync with one of the NFs (see
+README.md → "Issues hit and fixed" for why). Fix: restart every core NF pod
+once, then retry this step.
+```bash
+kubectl -n core delete pod -l 'nf in (amf,ausf,smf,upf,udm,udr,pcf,nssf,webui)'
+# wait ~30s for them all to become Ready, then re-run the pod delete above
+```
+
+---
+
+## 4. Watch it happen live (logs)
+
+While the capture is running, tail the UE's own log — it narrates the whole
+flow from the UE's point of view, which is the easiest single place to see
+whether the attach succeeded:
+
+```bash
+POD=$(kubectl -n core get pods -l component=ue -o jsonpath='{.items[0].metadata.name}')
+kubectl -n core logs -f "$POD"
+```
+
+Expected output for a successful attach (abridged):
+```
+[nas] [info] UE switches to state [MM-REGISTER-INITIATED]
+[nas] [debug] Authentication Request received
+[nas] [debug] Security Mode Command received
+[nas] [debug] Registration accept received
+[nas] [info] Initial Registration is successful
+[nas] [debug] Sending PDU Session Establishment Request
+[nas] [debug] PDU Session Establishment Accept received
+[nas] [info] PDU Session establishment is successful PSI[1]
+[app]  [info] Connection setup for PDU session[1] is successful, TUN interface[uesimtun0, 10.1.0.x] is up.
+```
+Once you see the last line, the session is up — go test data-plane traffic
+(§6) or stop the capture (§2).
+
+To see the *network* side of the same events, tail AMF and SMF in separate
+terminals:
+```bash
+kubectl -n core logs -f deploy/core-free5gc-amf-amf
+kubectl -n core logs -f deploy/core-free5gc-smf-smf
+```
+AMF's log shows `Handle Registration Request` → `Authentication procedure`
+→ `Send Registration Accept`. SMF's shows `HandlePDUSessionEstablishmentRequest`
+→ `Sending PFCP Session Establishment Request` → the SMContext being created.
+
+---
+
+## 5. Reading the trace in Wireshark
+
+Once you have packets (live or from a saved `.pcap`), here's what to look
+for, in the order they appear.
+
+### 5a. N2 — NGAP/SCTP (registration + PDU session signaling)
+Filter: `sctp` or `ngap`
+
+Key frames, in order:
+1. **NGSetupRequest / NGSetupResponse** — gNB registering itself with AMF (happens once, right after the gNB pod starts, before any UE activity)
+2. **InitialUEMessage** — carries the UE's first NAS message (Registration Request); expand it to see the embedded `NAS-5GS` layer
+3. **DownlinkNASTransport** — AMF→UE, carries Authentication Request, then Security Mode Command, then Registration Accept
+4. **UplinkNASTransport** — UE→AMF, carries Authentication Response, Security Mode Complete, Registration Complete
+5. **InitialContextSetupRequest/Response** — AMF telling gNB to set up UE context (happens right after Registration Accept)
+6. Later: another **UplinkNASTransport** carrying the PDU Session Establishment Request, and a **PDUSessionResourceSetupRequest/Response** pair when the session comes
+up (this is also where the N3 GTP-U tunnel endpoint gets negotiated)
+
+Right-click any NGAP frame → **Follow → NAS-5GS** shows just the
+UE↔network NAS conversation on its own, which is often the fastest way to
+read the whole attach in sequence.
+
+### 5b. SBI — HTTP/2 + JSON (NF↔NF calls)
+Filter: `http2` or `tcp.port == 80`
+
+Because everything runs in-cluster on plain HTTP (no TLS — this is a lab),
+you can read the JSON bodies directly. Look for these paths, roughly in
+order:
+- `POST /nausf-auth/v1/ue-authentications` — AMF asking AUSF to authenticate the UE
+- `POST /nudm-ueau/.../generate-auth-data` — AUSF asking UDM for auth vectors
+- `GET /nudm-sdm/.../nssai` and `.../am-data` — AMF checking subscription data
+- `PUT /nudm-uecm/.../registrations/amf-3gpp-access` — AMF registering itself as serving this UE, with UDM
+- `POST /nsmf-pdusession/v1/sm-contexts` — AMF asking SMF to create a PDU session
+- `GET /nudm-sdm/.../sm-data` — SMF fetching session-management subscription data
+- `POST /npcf-smpolicycontrol/v1/sm-policies` — SMF fetching policy from PCF
+
+Each NF also does `PUT/PATCH /nnrf-nfm/v1/nf-instances/...` against NRF —
+that's the registration/heartbeat traffic, not part of this specific UE's
+flow, and it's chatty; safe to ignore unless you're debugging NRF itself.
+
+### 5c. N4 — PFCP (SMF↔UPF session setup)
+Filter: `pfcp` or `udp.port == 8805`
+
+Two message pairs matter:
+1. **PFCP Association Setup Request/Response** — happens once, when both SMF and UPF are freshly up (not per-UE)
+2. **PFCP Session Establishment Request/Response** — one per PDU session. The Request carries the PDR/FAR rules (how to match and forward the UE's traffic); the Respon
+se's F-SEID confirms the UPF accepted them.
+
+If the Response's cause isn't "Request accepted", or you see PFCP Session
+Establishment retried multiple times, that's the association being stale
+— see the NRF caveat in §3.
+
+### 5d. N3/N9 — GTP-U (actual user data)
+Filter: `gtp` or `udp.port == 2152`
+
+You won't see anything here until a PDU session is actually established
+*and* something sends traffic through it (§6). Each GTP-U frame wraps a
+plain IP packet — expand it to see the UE's inner IP packet (source
+`10.1.0.x`, the PDU session IP) tunneled over the outer N3 IP.
+
+---
+
+## 6. Generate actual data-plane traffic
+
+Registration alone never produces GTP-U packets — you need to make the UE
+actually send something over its new TUN interface:
+
+```bash
+POD=$(kubectl -n core get pods -l component=ue -o jsonpath='{.items[0].metadata.name}')
+kubectl -n core exec -t "$POD" -- ping -I uesimtun0 -c4 8.8.8.8
+```
+
+While this runs, you should see in the trace:
+- 4 GTP-U frames UE→UPF (uplink, N3) each wrapping an ICMP Echo Request
+- 4 GTP-U frames UPF→UE (downlink, N3) each wrapping an ICMP Echo Reply
+- plain (non-GTP) ICMP packets on the UPF's N6 interface (172.29.40.200) to/from 8.8.8.8 — this is the UPF decapsulating and forwarding onto the "internet" (the kind doc
+ker bridge)
+
+---
+
+## 7. Quick reference: capture filters by question
+
+| You want to see... | Filter |
+|---|---|
+| Everything about one UE attach | `sctp or (tcp.port==80 and http2) or pfcp or gtp` |
+| Just the NAS conversation | `ngap` then Follow → NAS-5GS |
+| Just the auth handshake | `http2 and (http2.header.path contains "ueau" or http2.header.path contains "ue-authentications")` |
+| Just the PDU session setup | `pfcp or (ngap.procedureCode == 5)` (5 = PDUSessionResourceSetup) |
+| Just user data | `gtp` |
+| One specific NF's SBI calls | `tcp.port==80 and ip.addr==<pod IP, see reference doc §4>` |
+
+---
+
+## 8. Cross-referencing pcap timestamps with logs
+
+`kubectl logs` timestamps and Wireshark's frame timestamps are both wall
+clock, so you can correlate them directly. If you saved a `.pcap` (§2,
+option B), grab the exact times of interest from the UE/AMF/SMF logs first
+(they print millisecond-precision timestamps), then in Wireshark:
+`Edit → Find Packet → search by "Frame time"`, or just eyeball the time
+column with those log timestamps as anchors.
+

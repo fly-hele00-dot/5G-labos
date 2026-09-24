@@ -1,0 +1,25 @@
+# Second gNB "cell" for demoing inter-cell mobility. Deploy with:
+#   helm -n core upgrade --install ran-cell2 charts/towards5gs-helm/charts/ueransim \
+#     -f cluster/ueransim-tower2-values.generated.yaml --set fullnameOverride=ran-cell2
+ue:
+  enabled: false
+
+gnb:
+  service:
+    name: gnb2-service
+  configmap:
+    name: gnb2-configmap
+  n2if:
+    ipAddress: 10.47.60.251
+  n3if:
+    ipAddress: 10.47.60.234
+  configuration: |-
+    mcc: '208'
+    mnc: '93'
+    nci: '0x000000020'
+    idLength: 32
+    tac: 2
+    slices:
+      - sst: 0x1
+        sd: 0x010203
+    ignoreStreamIds: true

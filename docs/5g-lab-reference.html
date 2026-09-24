@@ -1,0 +1,624 @@
+<title>5G Core Lab Reference</title>
+<meta name="description" content="Node, IP, port, and interface reference for the free5GC + UERANSIM lab on kind" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --surface:#ffffff;
+    --surface-2:#eaeef1;
+    --ink:#141a21;
+    --ink-dim:#4d5966;
+    --ink-faint:#7c8894;
+    --border:#d8dee4;
+    --border-strong:#b9c2ca;
+    --accent:#0e7c86;
+    --accent-ink:#ffffff;
+    --accent-soft:#e1f1f0;
+    --accent-line:#0e7c86;
+    --good:#1a7f4e;
+    --good-soft:#e2f5ec;
+    --good-line:#1a7f4e;
+    --warn:#93590a;
+    --warn-soft:#faf0da;
+    --warn-line:#c17a1a;
+    --crit:#a3312a;
+    --crit-soft:#fbe9e7;
+    --shadow: 0 1px 2px rgba(20,26,33,0.06), 0 6px 20px rgba(20,26,33,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1013;
+      --surface:#141a1f;
+      --surface-2:#1a2126;
+      --ink:#e8edf0;
+      --ink-dim:#a2adb5;
+      --ink-faint:#6d7981;
+      --border:#28323a;
+      --border-strong:#3a464f;
+      --accent:#4cd6cd;
+      --accent-ink:#04211f;
+      --accent-soft:#123531;
+      --accent-line:#4cd6cd;
+      --good:#5fd99b;
+      --good-soft:#123626;
+      --good-line:#5fd99b;
+      --warn:#f2bd63;
+      --warn-soft:#332506;
+      --warn-line:#f2bd63;
+      --crit:#f0847c;
+      --crit-soft:#3a1613;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1013;
+    --surface:#141a1f;
+    --surface-2:#1a2126;
+    --ink:#e8edf0;
+    --ink-dim:#a2adb5;
+    --ink-faint:#6d7981;
+    --border:#28323a;
+    --border-strong:#3a464f;
+    --accent:#4cd6cd;
+    --accent-ink:#04211f;
+    --accent-soft:#123531;
+    --accent-line:#4cd6cd;
+    --good:#5fd99b;
+    --good-soft:#123626;
+    --good-line:#5fd99b;
+    --warn:#f2bd63;
+    --warn-soft:#332506;
+    --warn-line:#f2bd63;
+    --crit:#f0847c;
+    --crit-soft:#3a1613;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+    font-weight:700;
+    letter-spacing:0.01em;
+    text-wrap:balance;
+    color:var(--ink);
+    margin:0;
+  }
+  code, .mono, td.mono, .val{
+    font-family:"IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-variant-numeric:tabular-nums;
+  }
+  a{color:var(--accent);}
+  p{margin:0 0 12px;color:var(--ink-dim);max-width:70ch;}
+  table{border-collapse:collapse;width:100%;}
+  .shell{
+    display:grid;
+    grid-template-columns:250px minmax(0,1fr);
+    max-width:1240px;
+    margin:0 auto;
+  }
+  /* ---- Sidebar nav ---- */
+  nav.toc{
+    position:sticky;
+    top:0;
+    align-self:start;
+    height:100vh;
+    overflow-y:auto;
+    padding:28px 18px 28px 24px;
+    border-right:1px solid var(--border);
+  }
+  .toc-brand{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:22px;
+  }
+  .toc-brand .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--good);
+    box-shadow:0 0 0 3px var(--good-soft);
+    flex:none;
+  }
+  .toc-brand span{
+    font-family:"IBM Plex Mono";
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;counter-reset:sec;}
+  .toc li{counter-increment:sec;}
+  .toc a{
+    display:flex;
+    gap:10px;
+    align-items:baseline;
+    text-decoration:none;
+    color:var(--ink-dim);
+    font-size:13.5px;
+    padding:7px 10px;
+    border-radius:7px;
+  }
+  .toc a::before{
+    content:counter(sec,decimal-leading-zero);
+    font-family:"IBM Plex Mono";
+    font-size:11px;
+    color:var(--ink-faint);
+  }
+  .toc a:hover{background:var(--surface-2);color:var(--ink);}
+
+  /* ---- Main content ---- */
+  main{padding:44px clamp(20px,4vw,56px) 100px;min-width:0;}
+  header.hero{margin-bottom:40px;}
+  .eyebrow{
+    font-family:"IBM Plex Mono";
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:10px;
+    display:block;
+  }
+  h1.title{font-size:clamp(28px,4vw,40px);line-height:1.08;max-width:20ch;}
+  .subtitle{font-size:16px;color:var(--ink-dim);max-width:62ch;margin-top:14px;}
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;}
+  .pill{
+    display:inline-flex;align-items:center;gap:7px;
+    font-family:"IBM Plex Mono";font-size:12px;
+    padding:6px 11px;border-radius:100px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--ink-dim);
+  }
+  .pill b{color:var(--ink);font-weight:600;}
+  .pill.good{border-color:var(--good-line);background:var(--good-soft);color:var(--good);}
+  .pill.warn{border-color:var(--warn-line);background:var(--warn-soft);color:var(--warn);}
+  .pill .sw{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+
+  section{padding:52px 0;border-top:1px solid var(--border);}
+  section:first-of-type{border-top:none;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap;}
+  .sec-num{font-family:"IBM Plex Mono";color:var(--accent);font-size:14px;}
+  h2{font-size:23px;}
+  .sec-intro{margin-top:14px;margin-bottom:26px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+  }
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);}
+  table.ref{font-size:13.5px;min-width:560px;}
+  table.ref th{
+    text-align:left;
+    font-family:"IBM Plex Mono";
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    font-weight:500;
+    padding:11px 16px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  table.ref td{
+    padding:11px 16px;
+    border-bottom:1px solid var(--border);
+    color:var(--ink-dim);
+    vertical-align:top;
+  }
+  table.ref tr:last-child td{border-bottom:none;}
+  table.ref td.mono, table.ref td b{color:var(--ink);}
+  table.ref td b{font-weight:600;}
+  table.ref tr:hover td{background:var(--surface-2);}
+  .tag{
+    display:inline-block;font-family:"IBM Plex Mono";font-size:10.5px;
+    padding:2px 7px;border-radius:5px;border:1px solid var(--border-strong);
+    color:var(--ink-dim);white-space:nowrap;
+  }
+  .tag.new{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft);}
+  .tag.old{color:var(--ink-faint);}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .kv{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);}
+  .kv h4{font-size:12px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-faint);font-family:"IBM Plex Mono";font-weight:500;margin-bottom:12px;}
+  .kv dl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;margin:0;}
+  .kv dt{color:var(--ink-faint);font-size:13px;}
+  .kv dd{margin:0;font-family:"IBM Plex Mono";font-size:13px;color:var(--ink);text-align:right;}
+
+  figure.diagram{margin:0 0 10px;}
+  figure.diagram svg{width:100%;height:auto;display:block;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);}
+  figcaption{font-size:13px;color:var(--ink-faint);margin-top:10px;max-width:72ch;}
+  .diagram text{fill:currentColor;font-family:"IBM Plex Mono";}
+  .box-label{font-family:"IBM Plex Sans";}
+
+  .callout{
+    display:flex;gap:14px;padding:18px 20px;border-radius:12px;
+    border:1px solid var(--warn-line);background:var(--warn-soft);
+    margin-bottom:18px;
+  }
+  .callout.crit{border-color:var(--crit);background:var(--crit-soft);}
+  .callout.good{border-color:var(--good-line);background:var(--good-soft);}
+  .callout .ic{font-family:"IBM Plex Mono";font-weight:700;color:var(--warn);flex:none;}
+  .callout.crit .ic{color:var(--crit);}
+  .callout.good .ic{color:var(--good);}
+  .callout h4{font-size:14.5px;margin-bottom:6px;color:var(--ink);}
+  .callout p{margin:0;font-size:13.5px;color:var(--ink-dim);}
+  .callout code{background:var(--surface);padding:1px 5px;border-radius:4px;border:1px solid var(--border);font-size:12.5px;}
+
+  ol.steps{margin:0;padding:0;list-style:none;counter-reset:step;display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow);}
+  ol.steps li{counter-increment:step;display:flex;gap:16px;padding:15px 18px;border-bottom:1px solid var(--border);}
+  ol.steps li:last-child{border-bottom:none;}
+  ol.steps li::before{
+    content:counter(step,decimal-leading-zero);
+    font-family:"IBM Plex Mono";color:var(--accent);font-size:13px;flex:none;
+    padding-top:1px;
+  }
+  ol.steps .cmd{font-family:"IBM Plex Mono";font-size:13px;color:var(--ink);display:block;margin-bottom:3px;}
+  ol.steps .desc{font-size:13px;color:var(--ink-faint);}
+
+  .foot{padding:36px 0 10px;color:var(--ink-faint);font-size:12.5px;border-top:1px solid var(--border);margin-top:20px;}
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr;}
+    nav.toc{
+      position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);
+      padding:16px 20px;
+    }
+    .toc ol{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px;}
+    .toc a{white-space:nowrap;}
+    .grid-2{grid-template-columns:1fr;}
+    main{padding:32px 18px 72px;}
+  }
+</style>
+
+<div class="shell">
+  <nav class="toc">
+    <div class="toc-brand"><span class="dot"></span><span>corelab · kind cluster</span></div>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#topology">Topology</a></li>
+      <li><a href="#nodes">Cluster nodes</a></li>
+      <li><a href="#nfs">Network functions</a></li>
+      <li><a href="#interfaces">Reference points</a></li>
+      <li><a href="#ran">RAN simulator</a></li>
+      <li><a href="#access">Access &amp; credentials</a></li>
+      <li><a href="#issues">Issues resolved</a></li>
+      <li><a href="#ops">Operations</a></li>
+      <li><a href="#layout">Project layout</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">Internal lab reference — free5GC on Kubernetes</span>
+      <h1 class="title">5G Core Deployment Reference</h1>
+      <p class="subtitle">Every node, address, port, and interface in the local 5G Standalone core running on this machine — free5GC network functions plus a UERANSIM-simulated gNB/UE, orchestrated on a two-node <code>kind</code> cluster.</p>
+      <div class="pillrow">
+        <span class="pill good"><span class="sw"></span>Core network functions: <b>11/11 running</b></span>
+        <span class="pill good"><span class="sw"></span>UE registration (5G-AKA): <b>confirmed</b></span>
+        <span class="pill good"><span class="sw"></span>N4 PFCP association: <b>confirmed</b></span>
+        <span class="pill good"><span class="sw"></span>PDU session + data plane: <b>confirmed — ping through UPF works</b></span>
+      </div>
+    </header>
+
+    <section id="overview">
+      <div class="sec-head"><span class="sec-num">01</span><h2>Overview</h2></div>
+      <p class="sec-intro">This lab reproduces a full 5G Standalone core — AMF, SMF, UPF, AUSF, UDM, UDR, PCF, NSSF, NRF — using <a href="https://free5gc.org/" target="_blank" rel="noopener">free5GC</a>, plus a simulated radio access network (gNB + UE) using <a href="https://github.com/aligungr/UERANSIM" target="_blank" rel="noopener">UERANSIM</a>. Everything runs as Kubernetes pods on a single-worker <code>kind</code> cluster on this host, deployed from the <a href="https://github.com/Orange-OpenSource/towards5gs-helm" target="_blank" rel="noopener">towards5gs-helm</a> Helm charts (vendored and patched locally — see §8). The UE registers, establishes a PDU session, and pings the public internet through the UPF end to end.</p>
+      <div class="grid-2">
+        <div class="kv">
+          <h4>Host</h4>
+          <dl>
+            <dt>OS</dt><dd>Ubuntu 24.04 LTS</dd>
+            <dt>Kernel</dt><dd>7.0.0-31-generic</dd>
+            <dt>CPU / RAM</dt><dd>20 cores / 15&nbsp;GB</dd>
+            <dt>gtp5g module</dt><dd>master branch (loaded)</dd>
+          </dl>
+        </div>
+        <div class="kv">
+          <h4>Cluster</h4>
+          <dl>
+            <dt>Tool</dt><dd>kind v0.24.0</dd>
+            <dt>Cluster name</dt><dd>corelab</dd>
+            <dt>K8s version</dt><dd>v1.31.0</dd>
+            <dt>CNI</dt><dd>kindnet + Multus</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <section id="topology">
+      <div class="sec-head"><span class="sec-num">02</span><h2>Topology &amp; signaling paths</h2></div>
+      <p class="sec-intro">All pods are scheduled on the single worker node. Reference-point interfaces (N1–N9) are realized as Multus <code>ipvlan</code> sub-interfaces layered on that node's one <code>eth0</code>; service-based interfaces (SBI) ride the ordinary pod network. The highlighted path is the one verified live, end to end.</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 960 610" role="img" aria-label="Topology diagram: UE connects over radio to gNB; gNB reaches AMF over N2 and UPF over N3; AMF and SMF sit on the service-based interface bus with NRF, AUSF, UDM, UDR, PCF and NSSF; SMF reaches UPF over N4; UPF reaches the external data network over N6. The full UE-gNB-UPF-DataNetwork path is highlighted as verified working end to end.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="arrowWarn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--crit)"/>
+            </marker>
+          </defs>
+
+          <!-- worker node boundary -->
+          <rect x="24" y="40" width="810" height="540" rx="16" fill="none" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.4" stroke-dasharray="3 5"/>
+          <text x="40" y="64" font-size="11" letter-spacing="1" fill="currentColor" fill-opacity="0.55">KIND-WORKER · 172.29.40.3 · CONTAINERD PODS</text>
+
+          <!-- SBI bus -->
+          <line x1="70" y1="180" x2="760" y2="180" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.5"/>
+          <text x="70" y="168" font-size="11" fill="currentColor" fill-opacity="0.55">SERVICE-BASED INTERFACE (SBI) · HTTP/2 + JSON, NRF-mediated discovery</text>
+
+          <!-- top row NF boxes: NRF, AUSF, UDM, UDR, PCF, NSSF -->
+          <!-- centers x: 110,230,350,470,590,710 ; box 96x46 top y=98 -->
+          <g class="box-label" font-size="12.5">
+            <!-- NRF -->
+            <line x1="110" y1="144" x2="110" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="62" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="110" y="126" text-anchor="middle" font-weight="600">NRF</text>
+            <!-- AUSF -->
+            <line x1="230" y1="144" x2="230" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="182" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="230" y="126" text-anchor="middle" font-weight="600">AUSF</text>
+            <!-- UDM -->
+            <line x1="350" y1="144" x2="350" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="302" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="350" y="126" text-anchor="middle" font-weight="600">UDM</text>
+            <!-- UDR -->
+            <line x1="470" y1="144" x2="470" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="422" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="470" y="126" text-anchor="middle" font-weight="600">UDR</text>
+            <!-- PCF -->
+            <line x1="590" y1="144" x2="590" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="542" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="590" y="126" text-anchor="middle" font-weight="600">PCF</text>
+            <!-- NSSF -->
+            <line x1="710" y1="144" x2="710" y2="180" stroke="currentColor" stroke-opacity="0.35"/>
+            <rect x="662" y="98" width="96" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+            <text x="710" y="126" text-anchor="middle" font-weight="600">NSSF</text>
+          </g>
+
+          <!-- UDM<->UDR SBI link (Nudr) -->
+          <line x1="398" y1="121" x2="422" y2="121" stroke="currentColor" stroke-opacity="0.35" marker-end="url(#arrow)"/>
+
+          <!-- AMF + SMF below bus -->
+          <line x1="270" y1="180" x2="270" y2="218" stroke="currentColor" stroke-opacity="0.35"/>
+          <rect x="210" y="218" width="120" height="54" rx="8" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.3"/>
+          <text x="270" y="250" text-anchor="middle" font-size="14" font-weight="700">AMF</text>
+
+          <line x1="560" y1="180" x2="560" y2="218" stroke="currentColor" stroke-opacity="0.35"/>
+          <rect x="500" y="218" width="120" height="54" rx="8" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.3"/>
+          <text x="560" y="250" text-anchor="middle" font-size="14" font-weight="700">SMF</text>
+
+          <!-- AMF -> gNB (N2) -->
+          <path d="M 270,272 L270,300 L200,300 L200,318" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="206" y="294" font-size="11" fill="currentColor" fill-opacity="0.75">N2 · NGAP/SCTP:38412</text>
+
+          <!-- SMF -> UPF (N4) -->
+          <line x1="560" y1="272" x2="560" y2="400" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="572" y="340" font-size="11" fill="currentColor" fill-opacity="0.75">N4 · PFCP:8805</text>
+
+          <!-- RAN row: UE, gNB ; UPF -->
+          <rect x="20" y="326" width="90" height="46" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+          <text x="65" y="354" text-anchor="middle" font-size="13" font-weight="600">UE</text>
+
+          <rect x="150" y="318" width="100" height="54" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+          <text x="200" y="350" text-anchor="middle" font-size="13" font-weight="600">gNB</text>
+
+          <!-- UE -> gNB (Uu) -->
+          <line x1="110" y1="349" x2="150" y2="349" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="130" y="338" text-anchor="middle" font-size="10" fill="currentColor" fill-opacity="0.6">Uu</text>
+
+          <!-- gNB -> UPF (N3) -->
+          <path d="M 250,372 C 350,410 420,420 500,430" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="300" y="405" font-size="11" fill="currentColor" fill-opacity="0.75">N3 · GTP-U:2152</text>
+
+          <rect x="500" y="400" width="120" height="60" rx="8" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.3"/>
+          <text x="560" y="435" text-anchor="middle" font-size="14" font-weight="700">UPF</text>
+
+          <!-- N9 stub, unused -->
+          <line x1="500" y1="450" x2="450" y2="480" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" stroke-dasharray="2 4"/>
+          <text x="368" y="495" font-size="10.5" fill="currentColor" fill-opacity="0.55">N9 (unused — single UPF)</text>
+
+          <!-- UPF -> DN (N6), crosses node boundary -->
+          <line x1="620" y1="430" x2="760" y2="430" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="628" y="418" font-size="11" fill="currentColor" fill-opacity="0.75">N6</text>
+          <rect x="762" y="400" width="172" height="60" rx="8" fill="var(--surface)" stroke="var(--border-strong)"/>
+          <text x="848" y="425" text-anchor="middle" font-size="12.5" font-weight="600">Data Network</text>
+          <text x="848" y="443" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity="0.6">172.29.40.0/24 (docker bridge)</text>
+
+          <!-- legend -->
+          <g font-size="11" fill="currentColor" fill-opacity="0.6">
+            <line x1="40" y1="560" x2="70" y2="560" stroke="currentColor" stroke-opacity="0.5" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <text x="78" y="564">signaling path (SBI service bus)</text>
+            <line x1="330" y1="560" x2="360" y2="560" stroke="var(--accent)" stroke-width="2"/>
+            <text x="368" y="564">verified live end-to-end (registration + PDU session + ping)</text>
+          </g>
+        </svg>
+        <figcaption>Every network function in this cluster, grouped by how it talks to its peers: the SBI bus across the top (HTTP/2, discovered via NRF), the AMF/SMF control path below it, and the RAN + user-plane path (UE → gNB → UPF → Data Network) at the bottom, highlighted in teal — this exact path was verified live: registration, PDU session establishment, and a successful ping to 8.8.8.8 through the UPF.</figcaption>
+      </figure>
+    </section>
+
+    <section id="nodes">
+      <div class="sec-head"><span class="sec-num">03</span><h2>Cluster nodes</h2></div>
+      <p class="sec-intro">Two containers make up the <code>kind</code> cluster, both on the docker <code>kind</code> bridge network <code>172.29.40.0/24</code> (gateway <code>172.29.40.1</code>).</p>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Node</th><th>Role</th><th>Internal IP</th><th>K8s version</th><th>OS / kernel</th><th>Runtime</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><b>corelab-control-plane</b></td><td>control-plane</td><td class="mono">172.29.40.2</td><td class="mono">v1.31.0</td><td>Debian 12 (bookworm)<br>7.0.0-31-generic</td><td class="mono">containerd 1.7.18</td></tr>
+            <tr><td class="mono"><b>corelab-worker</b></td><td>worker — hosts every pod below</td><td class="mono">172.29.40.3</td><td class="mono">v1.31.0</td><td>Debian 12 (bookworm)<br>7.0.0-31-generic</td><td class="mono">containerd 1.7.18</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="nfs">
+      <div class="sec-head"><span class="sec-num">04</span><h2>Network functions</h2></div>
+      <p class="sec-intro">All pods run in namespace <code>core</code> on <code>corelab-worker</code>. Every core NF runs the current official free5GC <span class="tag new">v4.2.3</span> image (a mixed-version stack turned out not to interoperate cleanly — see §8); only WebUI's helper <b>DBPython</b> container still runs the older vendored image, since it's just a provisioning script with no protocol version of its own.</p>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>NF</th><th>Image</th><th>Pod IP (eth0)</th><th>Secondary interface(s)</th><th>ClusterIP service</th></tr></thead>
+          <tbody>
+            <tr><td><b>AMF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">access &amp; mobility mgmt</span></td><td class="mono">free5gc/amf:v4.2.3</td><td class="mono">10.212.1.25</td><td class="mono">N2 10.47.60.249<br>:38412/SCTP</td><td class="mono">10.213.127.140:80</td></tr>
+            <tr><td><b>SMF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">session mgmt</span></td><td class="mono">free5gc/smf:v4.2.3</td><td class="mono">10.212.1.9</td><td class="mono">N4 10.47.60.244<br>:8805/UDP</td><td class="mono">10.213.149.195:80</td></tr>
+            <tr><td><b>UPF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">user plane</span></td><td class="mono">free5gc/upf:v4.2.3</td><td class="mono">10.212.1.13</td><td class="mono">N3 10.47.60.233:2152<br>N4 10.47.60.241:8805<br>N6 172.29.40.200</td><td class="mono">—</td></tr>
+            <tr><td><b>AUSF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">authentication</span></td><td class="mono">free5gc/ausf:v4.2.3</td><td class="mono">10.212.1.10</td><td class="mono">—</td><td class="mono">10.213.233.65:80</td></tr>
+            <tr><td><b>UDM</b> <span class="tag new">v4.2.3</span><br><span class="tag old">unified data mgmt</span></td><td class="mono">free5gc/udm:v4.2.3</td><td class="mono">10.212.1.12</td><td class="mono">—</td><td class="mono">10.213.15.218:80</td></tr>
+            <tr><td><b>UDR</b> <span class="tag new">v4.2.3</span><br><span class="tag old">unified data repo</span></td><td class="mono">free5gc/udr:v4.2.3</td><td class="mono">10.212.1.4</td><td class="mono">—</td><td class="mono">10.213.116.238:80</td></tr>
+            <tr><td><b>PCF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">policy control</span></td><td class="mono">free5gc/pcf:v4.2.3</td><td class="mono">10.212.1.3</td><td class="mono">—</td><td class="mono">10.213.186.211:80</td></tr>
+            <tr><td><b>NSSF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">slice selection</span></td><td class="mono">free5gc/nssf:v4.2.3</td><td class="mono">10.212.1.8</td><td class="mono">—</td><td class="mono">10.213.222.253:80</td></tr>
+            <tr><td><b>NRF</b> <span class="tag new">v4.2.3</span><br><span class="tag old">repository fn</span></td><td class="mono">free5gc/nrf:v4.2.3</td><td class="mono">10.212.1.5</td><td class="mono">—</td><td class="mono">nrf-nnrf<br>10.213.247.140:8000</td></tr>
+            <tr><td><b>WebUI</b> <span class="tag new">v4.2.3</span></td><td class="mono">free5gc/webui:v4.2.3</td><td class="mono">10.212.1.11</td><td class="mono">—</td><td class="mono">webui-service (ClusterIP)<br>10.213.95.166:5000</td></tr>
+            <tr><td><b>MongoDB</b></td><td class="mono">bitnamilegacy/mongodb:4.4.4</td><td class="mono">10.212.1.14</td><td class="mono">—</td><td class="mono">10.213.76.226:27017</td></tr>
+            <tr><td><b>DBPython</b><br><span class="tag old">subscriber provisioning</span></td><td class="mono">towards5gs/free5gc-dbpython:latest</td><td class="mono">10.212.1.2</td><td class="mono">—</td><td class="mono">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="interfaces">
+      <div class="sec-head"><span class="sec-num">05</span><h2>Reference points</h2></div>
+      <p class="sec-intro">3GPP interface names, what they connect, and how each is realized here — Multus <code>ipvlan</code> sub-interface for the N-interfaces, plain HTTP/2 for the service bus.</p>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Ref. point</th><th>Between</th><th>Protocol / port</th><th>In this lab</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><b>N1</b></td><td>UE ↔ AMF</td><td>NAS signaling (carried inside NGAP)</td><td>End to end — 5G-AKA registration + PDU session confirmed</td></tr>
+            <tr><td class="mono"><b>N2</b></td><td>gNB ↔ AMF</td><td class="mono">NGAP / SCTP :38412</td><td class="mono">gNB 10.47.60.250 ↔ AMF 10.47.60.249</td></tr>
+            <tr><td class="mono"><b>N3</b></td><td>gNB ↔ UPF</td><td class="mono">GTP-U / UDP :2152</td><td class="mono">gNB 10.47.60.236 ↔ UPF 10.47.60.233</td></tr>
+            <tr><td class="mono"><b>N4</b></td><td>SMF ↔ UPF</td><td class="mono">PFCP / UDP :8805</td><td class="mono">SMF 10.47.60.244 ↔ UPF 10.47.60.241 — association confirmed</td></tr>
+            <tr><td class="mono"><b>N6</b></td><td>UPF ↔ Data Network</td><td>plain IP</td><td class="mono">UPF 172.29.40.200 → kind bridge 172.29.40.0/24</td></tr>
+            <tr><td class="mono"><b>N9</b></td><td>UPF ↔ UPF</td><td>GTP-U / UDP :2152</td><td>not applicable — single UPF deployed</td></tr>
+            <tr><td class="mono"><b>N8 / N10 / N11 / N12 / N13 / N15 / N22…</b></td><td>AMF/SMF ↔ AUSF/UDM/PCF/NSSF</td><td class="mono">HTTP/2 + JSON, :80</td><td>Service-based interface (SBI) — NRF-mediated discovery, unencrypted (<code>global.sbi.scheme: http</code>, lab only)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ran">
+      <div class="sec-head"><span class="sec-num">06</span><h2>RAN simulator (UERANSIM)</h2></div>
+      <p class="sec-intro">One simulated gNB and one simulated UE, deployed via the <code>ueransim</code> chart into the same namespace.</p>
+      <div class="grid-2">
+        <div class="kv">
+          <h4>gNB — ran-gnb</h4>
+          <dl>
+            <dt>Image</dt><dd>towards5gs/ueransim-gnb:latest</dd>
+            <dt>Pod IP</dt><dd>10.212.1.38</dd>
+            <dt>N2 (NGAP)</dt><dd>10.47.60.250</dd>
+            <dt>N3 (GTP-U)</dt><dd>10.47.60.236</dd>
+            <dt>PLMN</dt><dd>MCC 208 · MNC 93</dd>
+            <dt>TAC</dt><dd>1</dd>
+            <dt>Slice (S-NSSAI)</dt><dd>SST 1 · SD 010203</dd>
+          </dl>
+        </div>
+        <div class="kv">
+          <h4>UE — ran-ue</h4>
+          <dl>
+            <dt>Image</dt><dd>towards5gs/ueransim-ue:latest</dd>
+            <dt>Pod IP</dt><dd>10.212.1.41</dd>
+            <dt>SUPI</dt><dd>imsi-208930000000003</dd>
+            <dt>Auth (K / OPc)</dt><dd>8baf473f…6862 / 8e27b6af…605d</dd>
+            <dt>PDU session</dt><dd>PSI 1 · 10.60.0.1 · DNN internet</dd>
+            <dt>Subscriber record</dt><dd>provisioned via DBPython + schema migration, see §8</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <section id="access">
+      <div class="sec-head"><span class="sec-num">07</span><h2>Access &amp; credentials</h2></div>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <thead><tr><th>Service</th><th>URL / address</th><th>Credentials</th></tr></thead>
+          <tbody>
+            <tr><td><b>free5GC WebUI</b></td><td class="mono">http://127.0.0.1:5000<br>(loopback port-forward: scripts/09-open-grafana.sh)</td><td class="mono">admin / free5gc</td></tr>
+            <tr><td><b>NRF</b> (service discovery)</td><td class="mono">http://nrf-nnrf:8000</td><td>internal only</td></tr>
+            <tr><td><b>MongoDB</b></td><td class="mono">mongodb://mongodb:27017</td><td>auth disabled (lab only)</td></tr>
+            <tr><td><b>Kubernetes API</b></td><td class="mono">kubectl --context kind-corelab</td><td>local kubeconfig</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="issues">
+      <div class="sec-head"><span class="sec-num">08</span><h2>Issues hit and resolved</h2></div>
+      <p class="sec-intro">towards5gs-helm bundles a 2023-era (v3.2.1) free5GC build. Its UPF requires <code>gtp5g 0.8.1–0.8.x</code>, which doesn't compile against this host's kernel without patching two removed/changed kernel APIs — current gtp5g does compile cleanly, so every NF was bumped to the current official <code>free5gc/&lt;nf&gt;:v4.2.3</code> image instead (a mixed v3.2.1/v4.2.3 stack turned out not to interoperate: SBI response schemas, config validation, and even the subscriber data model all moved between those releases). Each fix below was applied to the vendored charts in <code>charts/towards5gs-helm/</code>.</p>
+      <div class="callout good">
+        <div class="ic">✓</div>
+        <div>
+          <h4>gtp5g's own latest release tag is stale for this kernel</h4>
+          <p>Even gtp5g's own latest release tag (<code>v0.10.2</code>) still references a kernel struct field (<code>flowi4_tos</code>) this host's kernel renamed to <code>flowi4_dscp</code>. That fix landed on gtp5g's <code>master</code> branch but hasn't been cut into a tag yet, so <code>01-install-gtp5g.sh</code> tracks <code>master</code> instead of pinning a tag — a reproducibility tradeoff, documented in the script, worth revisiting once a newer tag ships.</p>
+        </div>
+      </div>
+      <div class="callout good">
+        <div class="ic">✓</div>
+        <div>
+          <h4>Image layout &amp; static-IP rollouts (every NF)</h4>
+          <p>The old image's <code>WORKDIR</code> was <code>/free5gc/&lt;nf&gt;</code> with the binary at <code>/free5gc/&lt;nf&gt;/&lt;nf&gt;</code>; the current image is flat (<code>WORKDIR /free5gc</code>, binary at <code>/free5gc/&lt;nf&gt;</code>) — fixed by switching every NF's <code>command</code>/<code>args</code>/TLS-cert paths to absolute. AMF/SMF/UPF also have static ipvlan N-interface IPs, so Kubernetes' default RollingUpdate deadlocked on any change (new pod can't get the IP while the old one holds it) — fixed with <code>strategy: Recreate</code>.</p>
+        </div>
+      </div>
+      <div class="callout good">
+        <div class="ic">✓</div>
+        <div>
+          <h4>Config schema drift (UDR, AMF, WebUI)</h4>
+          <p>UDR needed <code>dbConnectorType: mongodb</code> added and <code>info.version</code> bumped <code>1.0.2→1.1.0</code> (validated strictly, not just descriptive). AMF needed a <code>t3555</code> retransmission-timer block added. WebUI needed <code>nrfUri</code>/<code>webServer</code>/<code>billingServer</code> added and <code>info.version</code> bumped <code>1.0.1→1.0.3</code> — all newly-required fields the old image's config never had.</p>
+        </div>
+      </div>
+      <div class="callout good">
+        <div class="ic">✓</div>
+        <div>
+          <h4>Subscriber auth data schema (the deepest issue)</h4>
+          <p>Current UDM/UDR use the 3GPP TS 29.504-shaped <code>AuthenticationSubscription</code>: flat <code>encPermanentKey</code>/<code>encOpcKey</code> hex strings and a structured <code>sequenceNumber</code> (<code>{sqn, sqnScheme}</code>) — not the old nested <code>milenage</code>/<code>opc</code>/<code>permanentKey</code> objects or a bare <code>sequenceNumber</code> string. The bundled <code>free5gc-dbpython</code> image still writes the old shape (it can't be rebuilt here), so <code>04-deploy-ueransim.sh</code> now runs a MongoDB migration right after provisioning to fix it up in place, every time.</p>
+        </div>
+      </div>
+      <div class="callout">
+        <div class="ic">i</div>
+        <div>
+          <h4>Operational gotcha: NRF's registry is in-memory</h4>
+          <p>NRF here doesn't persist to Mongo (<code>db.enabled: false</code>). Any time its pod restarts, every other NF's registration silently vanishes until <em>that</em> NF also restarts and re-registers — symptoms look unrelated (<code>AMF can not select an AUSF by NRF</code>, <code>UDM discovery failed</code>, PFCP association mismatches). After changing values and re-running <code>03-deploy-free5gc.sh</code>, if you see NF-discovery errors, restart every core NF pod once: <code>kubectl -n core delete pod -l 'nf in (amf,ausf,smf,upf,udm,udr,pcf,nssf,webui)'</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ops">
+      <div class="sec-head"><span class="sec-num">09</span><h2>Operations</h2></div>
+      <p class="sec-intro">Ordered setup scripts in <code>lab/scripts/</code>. All except 00/01 run without <code>sudo</code> once your shell has active <code>docker</code> group membership.</p>
+      <ol class="steps">
+        <li><div><span class="cmd">00-install-docker.sh</span><span class="desc">Installs Docker, adds your user to the <code>docker</code> group. Needs sudo — run yourself, then start a new shell.</span></div></li>
+        <li><div><span class="cmd">01-install-gtp5g.sh</span><span class="desc">Builds &amp; loads the gtp5g kernel module (from its <code>master</code> branch, see §8) the UPF needs for GTP-U. Needs sudo — run yourself.</span></div></li>
+        <li><div><span class="cmd">02-create-kind-cluster.sh</span><span class="desc">Creates the corelab kind cluster, installs CNI plugin binaries + Multus.</span></div></li>
+        <li><div><span class="cmd">03-deploy-free5gc.sh</span><span class="desc">Detects the docker bridge subnet, generates network overrides, deploys all core NFs via Helm.</span></div></li>
+        <li><div><span class="cmd">04-deploy-ueransim.sh</span><span class="desc">Provisions the test subscriber, migrates its auth data to the current UDM/UDR schema (see §8), then deploys the simulated gNB + UE and checks for PDU session establishment.</span></div></li>
+        <li><div><span class="cmd">05-teardown.sh</span><span class="desc">Deletes the whole kind cluster.</span></div></li>
+        <li><div><span class="cmd">06-wireshark-live.sh [node...] | --all-kind</span><span class="desc">Streams a live capture from one or more kind/docker nodes straight into a local Wireshark window (multi-node capture, one merged session).</span></div></li>
+        <li><div><span class="cmd">07-capture-to-file.sh [node...] | --all-kind</span><span class="desc">Same, but writes a merged <code>.pcap</code> to <code>lab/cluster/</code> for later analysis.</span></div></li>
+      </ol>
+    </section>
+
+    <section id="layout">
+      <div class="sec-head"><span class="sec-num">10</span><h2>Project layout</h2></div>
+      <div class="tbl-wrap">
+        <table class="ref">
+          <tbody>
+            <tr><td class="mono"><b>lab/cluster/</b></td><td>kind cluster config, generated Helm value overrides, saved packet captures</td></tr>
+            <tr><td class="mono"><b>lab/charts/towards5gs-helm/</b></td><td>vendored upstream Helm charts (free5GC + UERANSIM), with local patches for UPF/SMF image + path + rollout-strategy fixes</td></tr>
+            <tr><td class="mono"><b>lab/scripts/</b></td><td>ordered setup + operations scripts, 00 through 07</td></tr>
+            <tr><td class="mono"><b>lab/README.md</b></td><td>setup instructions, status, and the same issue log as §8</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="foot">Generated from the live cluster state of the <code>corelab</code> kind deployment. Re-run the <code>kubectl</code>/<code>helm</code> commands in <code>lab/README.md</code> to refresh any figure on this page.</div>
+  </main>
+</div>
