@@ -1,0 +1,108 @@
+{
+  "title": "5G Core Lab",
+  "uid": "5g-core-lab",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    { "id": 100, "type": "row", "title": "Node health (docker/kind nodes)", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
+    {
+      "id": 1, "type": "stat", "title": "Nodes Ready",
+      "gridPos": { "x": 0, "y": 1, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [
+        { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "id": 2, "type": "stat", "title": "Nodes Total",
+      "gridPos": { "x": 6, "y": 1, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "count(kube_node_info)", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] }
+    },
+    {
+      "id": 3, "type": "table", "title": "Node condition",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "kube_node_status_condition{condition=\"Ready\",status=\"true\"}", "refId": "A", "format": "table", "instant": true } ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "Value": true, "__name__": true, "condition": true, "status": true, "job": true, "instance": true }, "renameByName": { "node": "Node" } } }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "CPU usage per node (cores)",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\"}[2m])) by (node)", "legendFormat": "{{node}}", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Memory usage per node",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(container_memory_working_set_bytes{id=\"/\"}) by (node)", "legendFormat": "{{node}}", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+
+    { "id": 101, "type": "row", "title": "5G core NF pod health", "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 } },
+    {
+      "id": 6, "type": "stat", "title": "Core NF Pods Ready",
+      "gridPos": { "x": 0, "y": 14, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(kube_pod_status_ready{namespace=\"core\",condition=\"true\"}) / count(kube_pod_info{namespace=\"core\"})", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "red", "value": null }, { "color": "orange", "value": 0.7 }, { "color": "green", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "id": 7, "type": "table", "title": "Pod restarts by node",
+      "gridPos": { "x": 6, "y": 14, "w": 9, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "kube_pod_container_status_restarts_total{namespace=\"core\"} * on(pod, namespace) group_left(node) kube_pod_info{namespace=\"core\"}", "refId": "A", "format": "table", "instant": true } ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "namespace": true, "uid": true, "host_ip": true, "pod_ip": true, "created_by_kind": true, "created_by_name": true, "priority_class": true }, "renameByName": { "pod": "Pod", "container": "Container", "node": "Node", "Value": "Restarts" } } }
+      ]
+    },
+    {
+      "id": 8, "type": "table", "title": "Pod ready status by node",
+      "gridPos": { "x": 15, "y": 14, "w": 9, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "kube_pod_status_ready{namespace=\"core\",condition=\"true\"} * on(pod, namespace) group_left(node) kube_pod_info{namespace=\"core\"}", "refId": "A", "format": "table", "instant": true } ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "namespace": true, "condition": true, "uid": true, "host_ip": true, "pod_ip": true, "created_by_kind": true, "created_by_name": true, "priority_class": true }, "renameByName": { "pod": "Pod", "node": "Node", "Value": "Ready" } } }
+      ]
+    },
+
+    { "id": 102, "type": "row", "title": "PDU sessions (AMF)", "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 } },
+    {
+      "id": 9, "type": "stat", "title": "Active PDU Sessions",
+      "gridPos": { "x": 0, "y": 23, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(free5gc_amf_business_active_pdu_session_current_count)", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] }
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Active PDU sessions by access type",
+      "gridPos": { "x": 6, "y": 23, "w": 9, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "free5gc_amf_business_active_pdu_session_current_count", "legendFormat": "{{access_type}}", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "PDU session events / min",
+      "gridPos": { "x": 15, "y": 23, "w": 9, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum(rate(free5gc_amf_business_pdu_session_events_total[1m]) * 60) by (event)", "legendFormat": "{{event}}", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 40 } }, "overrides": [] }
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "UEs by GMM state (AMF)",
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "free5gc_amf_business_ue_gmm_state_count", "legendFormat": "{{gmm_state}} ({{access_type}})", "refId": "A" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    }
+  ]
+}
