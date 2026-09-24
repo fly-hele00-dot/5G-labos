@@ -1,0 +1,53 @@
+#
+# Software Name : towards5gs-helm
+# SPDX-FileCopyrightText: Copyright (c) 2021 Orange
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is distributed under the Apache License 2.0,
+# the text of which is available at https://github.com/Orange-OpenSource/towards5gs-helm/blob/main/LICENSE
+# or see the "LICENSE" file for more details.
+#
+# Author: Abderaouf KHICHANE, Ilhem FAJJARI, Ayoub BOUSSELMI, Ian Chen
+# Software description: An open-source project providing Helm charts to deploy 5G components (Core + RAN) on top of Kubernetes
+#
+{{- with .Values.udr }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "free5gc-udr.fullname" $ }}-configmap
+  labels:
+    app: {{ $.Values.global.projectName }}
+data:
+  udrcfg.yaml: |
+    info:
+      # Current official UDR image validates this field strictly against
+      # "1.1.0" -- it's not just descriptive.
+      version: 1.1.0
+      description: UDR initial local configuration
+
+    configuration:
+      sbi:
+        scheme: {{ $.Values.global.sbi.scheme }}
+        registerIPv4: {{ include "free5gc-udr.fullname" $ }}-service # IP used to register to NRF
+        bindingIPv4: 0.0.0.0  # IP used to bind the service
+        port: {{ .service.port }}
+        tls:
+          # Absolute paths -- see udr-deployment.yaml for why.
+          key: /free5gc/cert/udr.key
+          pem: /free5gc/cert/udr.pem
+
+      # Required (validated as non-zero) by the current official UDR image;
+      # the old towards5gs image didn't enforce this so it was previously
+      # omitted.
+      dbConnectorType: mongodb
+
+      mongodb:
+        name: free5gc
+        url: mongodb://{{ $.Values.mongodb.service.name }}:{{ $.Values.mongodb.service.port }}
+
+      nrfUri: {{ $.Values.global.sbi.scheme }}://{{ $.Values.global.nrf.service.name }}:{{ $.Values.global.nrf.service.port }}
+
+    logger:
+      {{- toYaml .configuration.logger | nindent 6 }}
+
+{{- end }}

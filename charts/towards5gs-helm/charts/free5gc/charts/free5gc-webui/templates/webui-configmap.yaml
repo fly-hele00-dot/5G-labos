@@ -1,0 +1,58 @@
+#
+# Software Name : towards5gs-helm
+# SPDX-FileCopyrightText: Copyright (c) 2021 Orange
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is distributed under the Apache License 2.0,
+# the text of which is available at https://github.com/Orange-OpenSource/towards5gs-helm/blob/main/LICENSE
+# or see the "LICENSE" file for more details.
+#
+# Author: Abderaouf KHICHANE, Ilhem FAJJARI, Ayoub BOUSSELMI, Ian Chen
+# Software description: An open-source project providing Helm charts to deploy 5G components (Core + RAN) on top of Kubernetes
+#
+{{- with .Values.webui }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .configmap.name }}
+  labels:
+    app: {{ $.Values.global.projectName }}
+data:
+  webuicfg.yaml: |
+    info:
+      # Current official WebUI image validates this field; bumped from 1.0.1.
+      version: 1.0.3
+      description: WebUI initial local configuration
+
+    configuration:
+      mongodb:
+        name: free5gc
+        url: mongodb://{{ $.Values.mongodb.service.name }}:{{ $.Values.mongodb.service.port }}
+      # Both added: current official image's schema requires them (the old
+      # towards5gs image's WebUI didn't).
+      nrfUri: {{ $.Values.global.sbi.scheme }}://{{ $.Values.global.nrf.service.name }}:{{ $.Values.global.nrf.service.port }}
+      webServer:
+        scheme: http
+        ipv4Address: 0.0.0.0
+        port: {{ .service.port }}
+      # Also required by the current official image; unused in this lab
+      # (no CDR/billing flows), so left disabled with the sample defaults.
+      billingServer:
+        # The validator treats bool false as "zero value" and rejects it,
+        # so this must be true even though nothing in this lab uses it.
+        enable: true
+        hostIPv4: 127.0.0.1
+        listenPort: 2121
+        portRange:
+          start: 2123
+          end: 2130
+        basePath: /tmp/webconsole
+        port: 2122
+        cert:
+          pem: /free5gc/cert/chf.pem
+          key: /free5gc/cert/chf.key
+
+    logger:
+      {{- toYaml .configuration.logger | nindent 6 }}
+
+{{- end }}
